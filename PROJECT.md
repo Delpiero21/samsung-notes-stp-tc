@@ -7,8 +7,9 @@
 
 ## 0. TL;DR (한 줄)
 
-> Samsung Notes 의 사용자 시나리오를 **STP (사내 UI dump 기반 scripting tool)** 로 자동화한
-> Python TC (Test Case) 모음. **TC0 = Notes 진입**이 모든 후속 TC 의 전제.
+> **5월 중 메뉴얼로 자사앱 Samsung Notes 를 완전 탐색 가능한 STP 스크립트 제작.**
+> 이후 스크립트 확산 / 유지보수 / 운영에 AI 도입.
+> Python TC (Test Case) 모음 — **TC0 = Notes 진입**이 모든 후속 TC 의 전제.
 
 ---
 
@@ -38,6 +39,41 @@ Samsung Notes 앱의 각 UI flow (새 노트 / 펜툴 / 텍스트 서식 / 폴�
 | **본 프로젝트 (STP TC)** | 검증 — "사람이 정의한 시나리오 100회 재생" | 회귀 / 안정성 / 재현성 |
 
 본 프로젝트는 검증자가 손으로 한 번 시나리오를 정의 → STP 로 100회 자동 재생 → 회귀 검증.
+
+### 1.4 일정 / 단계 (May 2026 마일스톤)
+
+```
+[Phase 1 — May 2026]  메뉴얼 (사람 주도) + STP 스크립트 제작
+   ├─ 목표: Samsung Notes 의 모든 주요 시나리오를 TC 로 완전 탐색
+   ├─ 작업: 사람이 시나리오 정의 → STP 스크립트 작성 → 단말 검증
+   ├─ 산출물: tc/TC0.py ~ tc/TCN.py + common/ + reports/
+   └─ AI 사용: 0 — 사람 주도. AI 는 코드 작성 보조 (TC 코드 generation 등) 만
+
+[Phase 2 — June 2026~]  스크립트 확산 + 유지보수 + 운영 AI 도입
+   ├─ 확산: 다른 자사앱 (Reminder / Calendar / Health 등) 에 TC 패턴 복제
+   ├─ 유지보수: 빌드 업데이트 시 깨지는 TC 자동 진단 + 수정 제안 AI
+   ├─ 운영: nightly run + 회귀 비교 + 결과 자동 요약 AI
+   └─ AI 사용: ⭐ 확산 / 유지보수 / 운영 단계의 효율 극대화
+
+[Phase 3 — TBD]  사내 표준 검증 인프라
+   └─ SDF Rack 통합 + CI nightly + 결과 dashboard
+```
+
+→ Phase 1 의 5월 산출물 (TC 모음) 이 Phase 2 의 AI 입력. **Phase 1 = 메뉴얼 + AI 코드 보조**, **Phase 2 = AI 가 메인**.
+
+### 1.5 외부 input 으로 확보 필요 (5월 작업 전제)
+
+본 프로젝트가 5월 안에 완성되려면 다음이 외부에서 확보돼야 한다:
+
+| 항목 | 확보 방법 | 책임 | 마감 |
+|---|---|---|---|
+| **Samsung Notes 테스트 시나리오** (TC1~TCN 의 시나리오 정의) | 검증자 / QA 가 시나리오 명세 작성 | QA | 5월 1주차 |
+| **precondition 정보** (각 시나리오의 단말 사전 상태 — 노트 N개 / 폴더 / 권한 / 로그인 등) | 검증자 / QA + 단말 setup 가이드 | QA | 5월 1주차 |
+| **STP API 매뉴얼** (`common/stp_wrapper.py` 구체 구현용) | 사내 STP 팀 | STP 팀 | 5월 1주차 |
+| **Samsung Notes 의 resource-id 인벤토리** (element 식별용) | uiautomator dump + 정리 | 본 프로젝트 | 5월 1주차 |
+| **검증용 단말 (Galaxy S26)** + USB debugging 설정 | 사내 단말 풀 | 사내 IT | 5월 1주차 |
+
+위 5개가 안 확보되면 5월 마일스톤 risk. 특히 **테스트 시나리오 + precondition** 이 가장 큰 unknown.
 
 ---
 
@@ -101,18 +137,21 @@ STP 의 정확한 API 는 사내 매뉴얼 참조. 본 문서는 일반 UI dump 
 
 ### 3.2 후속 TC (시나리오별)
 
-| TC | 시나리오 | 핵심 검증 |
-|---|---|---|
-| **TC0** | Samsung Notes 진입 | 메인 화면 로딩 |
-| **TC1** | 새 노트 생성 + 저장 | 노트 생성 + list 에 추가됨 |
-| **TC2** | 펜툴 모드 + 색상 9종 클릭 | 펜 색상 팔레트 popup (Case 4) |
-| **TC3** | 텍스트 입력 + 글자 서식 (B/I/U) | 키보드 + 글자 서식 toolbar |
-| **TC4** | 폴더 생성 + 노트 이동 | 폴더 / 노트 이동 |
-| **TC5** | 검색 (한국어 + 영어) | 검색 결과 list |
-| **TC6** | 노트 삭제 + 휴지통 복원 | 삭제 / 복원 flow |
-| **TC7** | 노트 공유 (취소만, 실제 전송 X) | 공유 다이얼로그 표시 |
-| **TC8** | AI 어시스트 popup 진입 | Case 5 (AI 어시스트 자체 popup) |
-| ... | (확장 가능) | |
+> ⚠ **아래 TC1~TC8 은 placeholder.** 실제 시나리오는 §1.5 의 **"Samsung Notes 테스트 시나리오"** 가
+> 외부 확보된 후 갱신. 5월 1주차 마감.
+
+| TC | 시나리오 (잠정) | 핵심 검증 | precondition (잠정) |
+|---|---|---|---|
+| **TC0** | Samsung Notes 진입 | 메인 화면 로딩 | 단말 잠금 해제, Notes 설치됨 |
+| **TC1** | 새 노트 생성 + 저장 | 노트 생성 + list 에 추가됨 | TC0 통과 |
+| **TC2** | 펜툴 모드 + 색상 9종 클릭 | 펜 색상 팔레트 popup (Case 4) | TC0 통과, 빈 노트 1개 생성된 상태 |
+| **TC3** | 텍스트 입력 + 글자 서식 (B/I/U) | 키보드 + 글자 서식 toolbar | TC0 통과, 빈 노트 1개 |
+| **TC4** | 폴더 생성 + 노트 이동 | 폴더 / 노트 이동 | TC0 통과, 노트 ≥ 1개 |
+| **TC5** | 검색 (한국어 + 영어) | 검색 결과 list | TC0 통과, 검색 가능 텍스트 가진 노트 ≥ 3개 |
+| **TC6** | 노트 삭제 + 휴지통 복원 | 삭제 / 복원 flow | TC0 통과, 노트 ≥ 1개 |
+| **TC7** | 노트 공유 (취소만, 실제 전송 X) | 공유 다이얼로그 표시 | TC0 통과, 노트 ≥ 1개 |
+| **TC8** | AI 어시스트 popup 진입 | Case 5 (AI 어시스트 자체 popup) | TC0 통과, AI 어시스트 활성 가능 단말 |
+| ... | (확장 가능 — QA 시나리오 확보 후) | | |
 
 ### 3.3 TC 실행 모드
 
@@ -599,15 +638,31 @@ python scripts/compare_runs.py reports/20260520_093024 reports/20260521_142133
 - ✅ 디렉토리 구조 결정
 - ✅ TC0 시나리오 정의 (Samsung Notes 진입)
 
-### 12.2 다음 단계 (우선순위 순)
+### 12.2 다음 단계 — May 2026 마일스톤
 
-1. **`common/stp_wrapper.py`** — STP API wrapping 구체 구현 (사내 매뉴얼 참조)
-2. **`tc/TC0.py`** — Samsung Notes 진입 + 진입 성공 판정
-3. **`tc/TC1.py`** — 새 노트 생성 + 저장 (가장 단순)
-4. **`tc/TC2.py`** — 펜툴 색상 9종 (Case 4 핵심)
-5. **`scripts/run_all.py`** — 일괄 실행
-6. **`reports/` 자동 생성 + summary.json**
-7. **TC3~TC8** 차례로 추가
+**5월 1주차 (외부 input 확보)** — §1.5 참조:
+1. ⏳ Samsung Notes **테스트 시나리오 명세서** 확보 (QA 협업)
+2. ⏳ 각 시나리오의 **precondition 정보** 확보 (단말 사전 상태)
+3. ⏳ **STP API 매뉴얼** 확보 (STP 팀)
+4. ⏳ Samsung Notes **resource-id 인벤토리** (uiautomator dump)
+5. ⏳ 검증용 단말 (Galaxy S26) USB debugging 셋업
+
+**5월 2주차 (foundation)**:
+1. `common/stp_wrapper.py` — STP API wrapping 구체 구현
+2. `common/notes_helpers.py` — resource-id 상수 + 좌표 helper
+3. `common/logger.py` + `common/assertions.py`
+4. `tc/TC0.py` — Samsung Notes 진입 + 진입 성공 판정 (가장 단순)
+
+**5월 3~4주차 (TC 본격 작성)**:
+- `tc/TC1.py` ~ `tc/TCN.py` — QA 시나리오 기반 TC 차례로 작성
+- 각 TC 마다 reports/ 자동 생성 + summary.json
+- `scripts/run_all.py` — 일괄 실행
+- 단말 검증 + 회귀 → "완전 탐색" 목표 달성
+
+**6월~ (Phase 2 — AI 도입)**:
+- 다른 자사앱 (Reminder / Calendar / Health) 으로 패턴 확산 ← AI 가 TC 자동 generation
+- 빌드 업데이트 시 깨지는 TC 자동 진단 + 수정 제안 AI
+- nightly run + 회귀 비교 + 결과 자동 요약 AI
 
 ### 12.3 확장 가능성
 
@@ -615,6 +670,7 @@ python scripts/compare_runs.py reports/20260520_093024 reports/20260521_142133
 - **단말 fleet 회귀** — Galaxy A / S / Z 시리즈 동시 회귀
 - **CI 통합** — 사내 CI 에서 nightly run
 - **메트릭 dashboard** — 시간순 PASS 비율 시각화
+- **다른 자사앱 확산** — Reminder / Calendar / Health / Bixby 등으로 패턴 복제
 
 ---
 
